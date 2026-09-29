@@ -1,15 +1,16 @@
+# Core
 pandas
 numpy
 scikit-learn
-networkx
 python-dotenv
-jupyter
+
+# Knowledge Graph
+networkx
 neo4j
-langchain
-langchain-community
-sentence-transformers
-faiss-cpu
-transformers
-torch
+
+# Development
+jupyter
+
+# Backend
 fastapi
 uvicorn
