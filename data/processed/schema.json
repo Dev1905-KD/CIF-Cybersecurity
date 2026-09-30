@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "ThreatActor": [
+      "id",
+      "name",
+      "description"
+    ],
+    "Technique": [
+      "id",
+      "name",
+      "description"
+    ],
+    "Tactic": [
+      "id",
+      "name",
+      "description"
+    ],
+    "Malware": [
+      "id",
+      "name",
+      "description"
+    ],
+    "Tool": [
+      "id",
+      "name",
+      "description"
+    ],
+    "Campaign": [
+      "id",
+      "name",
+      "description"
+    ],
+    "Vulnerability": [
+      "id",
+      "description",
+      "cvss_score",
+      "severity"
+    ],
+    "Product": [
+      "id",
+      "vendor",
+      "name"
+    ],
+    "CWE": [
+      "id",
+      "description"
+    ],
+    "NetworkEvent": [
+      "id",
+      "timestamp",
+      "source_ip",
+      "destination_ip",
+      "protocol",
+      "label"
+    ]
+  },
+  "relationships": [
+    "USES",
+    "TARGETS",
+    "EXPLOITS",
+    "AFFECTS",
+    "HAS_CWE",
+    "HAS_CVSS",
+    "BELONGS_TO",
+    "ASSOCIATED_WITH",
+    "OBSERVED_IN"
+  ]
+}
