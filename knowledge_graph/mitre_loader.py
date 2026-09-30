@@ -26,7 +26,10 @@ RELATIONSHIP_MAPPING = {
     "targets": "TARGETS",
     "exploits": "EXPLOITS",
     "attributed-to": "ASSOCIATED_WITH",
-    "associated-with": "ASSOCIATED_WITH"
+    "associated-with": "ASSOCIATED_WITH",
+    "mitigates": "MITIGATES",
+    "detects": "DETECTS",
+    "subtechnique-of": "SUBTECHNIQUE_OF"
 }
 
 
