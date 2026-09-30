@@ -21,31 +21,80 @@ def load_nvd_data():
 
     try:
 
-        for vulnerability in data.get(
+        vulnerabilities = data.get(
             "vulnerabilities",
             []
-        ):
+        )
+
+        for vulnerability in vulnerabilities:
+
+            # -------------------------
+            # Basic vulnerability data
+            # -------------------------
 
             cve_id = vulnerability.get("id")
 
             if not cve_id:
                 continue
 
-            properties = {
-                "id": cve_id,
-                "description": vulnerability.get(
-                    "description",
-                    ""
-                ),
-                "source": "NVD"
-            }
+            description = vulnerability.get(
+                "description",
+                ""
+            )
+
+            # -------------------------
+            # Create / update
+            # Vulnerability node
+            # -------------------------
 
             builder.create_node(
                 "Vulnerability",
-                properties
+                {
+                    "id": cve_id,
+                    "description": description,
+                    "source": "NVD"
+                }
             )
 
-        print("NVD Knowledge Graph loading completed.")
+            # -------------------------
+            # Create NVD Evidence node
+            # -------------------------
+
+            evidence_id = f"NVD-{cve_id}"
+
+            evidence_properties = {
+                "id": evidence_id,
+                "source": "NVD",
+                "claim": description,
+                "evidence_type": "vulnerability_record"
+            }
+
+            builder.create_node(
+                "Evidence",
+                evidence_properties
+            )
+
+            # -------------------------
+            # Vulnerability
+            # → NVD Evidence
+            # -------------------------
+
+            builder.create_relationship(
+                cve_id,
+                "Vulnerability",
+                "SUPPORTED_BY",
+                evidence_id,
+                "Evidence"
+            )
+
+        print(
+            "NVD Knowledge Graph loading completed successfully."
+        )
+
+        print(
+            f"Processed vulnerabilities: "
+            f"{len(vulnerabilities)}"
+        )
 
     finally:
         builder.close()

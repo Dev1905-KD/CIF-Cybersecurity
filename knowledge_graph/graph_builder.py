@@ -9,14 +9,22 @@ class GraphBuilder:
     def create_node(self, label, properties):
         query = f"""
         MERGE (n:{label} {{id: $id}})
-        SET n += $properties
+        ON CREATE SET n += $properties
+        ON MATCH SET n += $update_properties
         """
+
+        update_properties = {
+            key: value
+            for key, value in properties.items()
+            if key != "source"
+        }
 
         with self.connection.driver.session() as session:
             session.run(
                 query,
                 id=properties["id"],
-                properties=properties
+                properties=properties,
+                update_properties=update_properties
             )
 
     def create_relationship(
@@ -42,7 +50,7 @@ class GraphBuilder:
                 source_id=source_id,
                 target_id=target_id,
                 source=source
-        )
+            )
 
     def close(self):
         self.connection.close()
