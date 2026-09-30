@@ -131,7 +131,8 @@ def load_kev_data():
                     "Vulnerability",
                     "AFFECTS",
                     product_id,
-                    "Product"
+                    "Product",
+                    source="CISA KEV"
                 )
 
         print(

@@ -116,7 +116,8 @@ def load_mitre_data():
                 source_label,
                 neo4j_relationship,
                 target_ref,
-                target_label
+                target_label,
+                source="MITRE ATT&CK"
             )
 
         print("MITRE Knowledge Graph loading completed.")

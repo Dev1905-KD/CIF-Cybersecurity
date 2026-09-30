@@ -24,3 +24,23 @@ MATCH (n)
 RETURN labels(n) AS label, count(n) AS count
 ORDER BY count DESC
 """
+
+GET_EVIDENCE_FOR_CVE = """
+MATCH (v:Vulnerability {id: $cve})
+OPTIONAL MATCH (v)-[:SUPPORTED_BY]->(e:Evidence)
+OPTIONAL MATCH (v)-[:AFFECTS]->(p:Product)
+
+RETURN
+    v.id AS cve,
+    v.description AS description,
+    collect(DISTINCT {
+        source: e.source,
+        type: e.evidence_type,
+        claim: e.claim,
+        date_added: e.date_added
+    }) AS evidence,
+    collect(DISTINCT {
+        vendor: p.vendor,
+        product: p.name
+    }) AS products
+"""
