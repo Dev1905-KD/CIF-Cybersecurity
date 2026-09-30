@@ -6,26 +6,39 @@ class GraphBuilder:
     def __init__(self):
         self.connection = Neo4jConnection()
 
-    def create_vulnerability(
-        self,
-        vulnerability_id,
-        description,
-        source="NVD"
-    ):
-
-        query = """
-        MERGE (v:Vulnerability {id: $id})
-        SET v.description = $description,
-            v.source = $source
-        RETURN v
+    def create_node(self, label, properties):
+        query = f"""
+        MERGE (n:{label} {{id: $id}})
+        SET n += $properties
         """
 
         with self.connection.driver.session() as session:
             session.run(
                 query,
-                id=vulnerability_id,
-                description=description,
-                source=source
+                id=properties["id"],
+                properties=properties
+            )
+
+    def create_relationship(
+        self,
+        source_id,
+        source_label,
+        relationship,
+        target_id,
+        target_label
+    ):
+
+        query = f"""
+        MATCH (source:{source_label} {{id: $source_id}})
+        MATCH (target:{target_label} {{id: $target_id}})
+        MERGE (source)-[:{relationship}]->(target)
+        """
+
+        with self.connection.driver.session() as session:
+            session.run(
+                query,
+                source_id=source_id,
+                target_id=target_id
             )
 
     def close(self):
