@@ -56,7 +56,11 @@ def load_kev_data():
                 "Vulnerability",
                 {
                     "id": cve_id,
-                    
+                    "description": vulnerability.get(
+                        "description",
+                        ""
+                    ),
+                    "source": "CISA KEV"
                 }
             )
 
@@ -100,8 +104,7 @@ def load_kev_data():
                 "Vulnerability",
                 "SUPPORTED_BY",
                 evidence_id,
-                "Evidence",
-                source="CISA KEV"
+                "Evidence"
             )
 
             # -------------------------
