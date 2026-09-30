@@ -23,3 +23,9 @@ RELATIONSHIPS = {
     "ASSOCIATED_WITH",
     "SUPPORTED_BY"
 }
+
+DATA_SOURCES = {
+    "MITRE": "MITRE ATT&CK",
+    "NVD": "National Vulnerability Database",
+    "KEV": "CISA Known Exploited Vulnerabilities"
+}

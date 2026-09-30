@@ -56,7 +56,7 @@ def load_kev_data():
                 "Vulnerability",
                 {
                     "id": cve_id,
-                    "source": "NVD/CISA KEV"
+                    
                 }
             )
 
@@ -81,7 +81,8 @@ def load_kev_data():
                 "known_ransomware_use": vulnerability.get(
                     "known_ransomware_use",
                     ""
-                )
+                ),
+                "evidence_type": "exploitation"
             }
 
             builder.create_node(
@@ -99,7 +100,8 @@ def load_kev_data():
                 "Vulnerability",
                 "SUPPORTED_BY",
                 evidence_id,
-                "Evidence"
+                "Evidence",
+                source="CISA KEV"
             )
 
             # -------------------------
