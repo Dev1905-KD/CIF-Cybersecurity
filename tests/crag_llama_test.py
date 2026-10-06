@@ -382,6 +382,50 @@ try:
         )
 
         print()
+    print()
+    print("Belief Revisions:")
+    print("=" * 60)
+
+    for revision in result.get(
+        "belief_revisions",
+        []
+    ):
+        print(
+            f"Belief ID: "
+            f"{revision['belief_id']}"
+        )
+
+        print(
+            f"Previous Status: "
+            f"{revision['previous_status']}"
+        )
+
+        print(
+            f"New Status: "
+            f"{revision['new_status']}"
+        )
+
+        print(
+            f"Revision Type: "
+            f"{revision['revision_type']}"
+        )
+
+        print(
+            f"Reason: "
+            f"{revision['reason']}"
+        )
+
+        print(
+            f"Evidence IDs: "
+            f"{revision['evidence_ids']}"
+        )
+
+        print(
+            f"Timestamp: "
+            f"{revision['timestamp']}"
+        )
+
+        print()    
 finally:
 
     pipeline.close()

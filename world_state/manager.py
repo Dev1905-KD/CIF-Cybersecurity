@@ -36,11 +36,22 @@ class WorldStateManager:
         self,
         evidence: dict[str, Any]
     ):
+        if "id" not in evidence:
+            evidence["id"] = (
+                f"evidence-{len(self.state.evidence) + 1}"
+            )
+
+        evidence["created_at"] = (
+            datetime.utcnow().isoformat()
+        )
+
         self.state.evidence.append(
             evidence
         )
 
         self.state.increment_version()
+
+        return evidence["id"]
 
     # ---------------------------------
     # Belief management

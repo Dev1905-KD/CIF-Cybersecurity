@@ -22,6 +22,9 @@ from world_state.manager import (
 )
 from belief_graph.manager import BeliefGraphManager
 from hypotheses.generator import HypothesisGenerator
+from belief_revision.revision import (
+    BeliefRevisionEngine
+)
 class CRAGLlamaPipeline:
 
     def __init__(self):
@@ -43,6 +46,7 @@ class CRAGLlamaPipeline:
             self.world_state
         )
         self.hypothesis_generator = HypothesisGenerator()
+        self.belief_revision = BeliefRevisionEngine()
     def run(self, query):
 
         # -------------------------
@@ -67,16 +71,11 @@ class CRAGLlamaPipeline:
         # Update Persistent World State
         # -------------------------
 
-        self.world_state.add_evidence({
+        retrieval_evidence_id = self.world_state.add_evidence({
             "query": query,
             "context": context,
-            "retrieval_status": retrieval_result.get(
-                "status"
-            ),
-            "evidence_status": retrieval_result.get(
-                "grading",
-                {}
-            ).get("status")
+            "retrieval_status": retrieval_result.get("status"),
+            "evidence_status": retrieval_result.get("grading", {}).get("status")
         })
         # -------------------------
         # 2. Check retrieval quality
@@ -200,6 +199,7 @@ class CRAGLlamaPipeline:
             answer=answer,
             consensus_result=consensus_result
         )
+        
         # -------------------------
         # Generate Hypotheses
         # -------------------------
@@ -210,6 +210,53 @@ class CRAGLlamaPipeline:
             consensus_result=consensus_result,
             beliefs=beliefs
         )
+        # -------------------------
+        # Belief Revision
+        # -------------------------
+
+        revision_results = []
+
+        for belief in beliefs:
+
+            revision_result = self.belief_revision.revise(
+                belief=belief,
+                consensus_status=consensus_result.get("status", "Needs Review"),
+                evidence_ids=[retrieval_evidence_id]
+            )
+
+            revision_results.append(
+                revision_result
+            )
+
+            # Sync revised belief with World State
+            self.world_state.set_belief(
+                belief.belief_id,
+                {
+                    "belief_id":
+                        belief.belief_id,
+
+                    "claim":
+                        belief.claim,
+
+                    "status":
+                        belief.status,
+
+                    "evidence_ids":
+                        belief.evidence_ids,
+
+                    "entity_ids":
+                        belief.entity_ids,
+
+                    "verification_status":
+                        belief.verification_status,
+
+                    "metadata":
+                        belief.metadata,
+
+                    "updated_at":
+                        belief.updated_at
+                }
+            )
         # -------------------------
         # Persist Hypotheses
         # -------------------------
@@ -332,6 +379,31 @@ class CRAGLlamaPipeline:
                         hypothesis.verification_status
                 }
                 for hypothesis in hypotheses
+            ],
+            "belief_revisions": [
+                {
+                    "belief_id":
+                        revision.belief_id,
+
+                    "previous_status":
+                        revision.previous_status,
+
+                    "new_status":
+                        revision.new_status,
+
+                    "revision_type":
+                        revision.revision_type,
+
+                    "reason":
+                        revision.reason,
+
+                    "evidence_ids":
+                        revision.evidence_ids,
+
+                    "timestamp":
+                        revision.timestamp
+                }
+                for revision in revision_results
             ]
         }
 
