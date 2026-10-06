@@ -275,7 +275,77 @@ try:
             "\nMessage:",
             result.get("message")
         )
+    # ---------------------------------
+    # Persistent World State
+    # ---------------------------------
 
+    world_state = pipeline.get_world_state()
+
+    print("\nPersistent World State:")
+    print("=" * 60)
+
+    print(
+        "State Version:",
+        world_state.version
+    )
+
+    print(
+        "Entities:",
+        len(world_state.entities)
+    )
+
+    print(
+        "Evidence Records:",
+        len(world_state.evidence)
+    )
+
+    print(
+        "Beliefs:",
+        len(world_state.beliefs)
+    )
+
+    print(
+        "Hypotheses:",
+        len(world_state.hypotheses)
+    )
+
+    print(
+        "Verification History:",
+        len(
+            world_state.verification_history
+        )
+    )
+    print()
+    print("Belief Graph:")
+    print("=" * 60)
+
+    for belief in result.get("beliefs", []):
+        print(
+            f"Belief ID: "
+            f"{belief['belief_id']}"
+        )
+
+        print(
+            f"Claim: "
+            f"{belief['claim']}"
+        )
+
+        print(
+            f"Status: "
+            f"{belief['status']}"
+        )
+
+        print(
+            f"Entities: "
+            f"{belief['entity_ids']}"
+        )
+
+        print(
+            f"Verification: "
+            f"{belief['verification_status']}"
+        )
+
+        print()
 finally:
 
     pipeline.close()

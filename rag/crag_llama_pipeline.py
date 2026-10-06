@@ -17,8 +17,10 @@ from agents.consistency_agent import (
 from agents.consensus import (
     ConsensusAgent
 )
-
-
+from world_state.manager import (
+    WorldStateManager
+)
+from belief_graph.manager import BeliefGraphManager
 class CRAGLlamaPipeline:
 
     def __init__(self):
@@ -26,7 +28,7 @@ class CRAGLlamaPipeline:
         self.crag = CRAGPipeline()
         self.generator = EvidenceGenerator()
         self.verifier = ClaimVerifier()
-
+        
         # ---------------------------------
         # Multi-Agent Verification
         # ---------------------------------
@@ -35,7 +37,10 @@ class CRAGLlamaPipeline:
         self.graph_agent = GraphAgent()
         self.consistency_agent = ConsistencyAgent()
         self.consensus_agent = ConsensusAgent()
-
+        self.world_state = WorldStateManager()
+        self.belief_graph = BeliefGraphManager(
+            self.world_state
+        )
     def run(self, query):
 
         # -------------------------
@@ -56,7 +61,21 @@ class CRAGLlamaPipeline:
             "context",
             ""
         )
+        # -------------------------
+        # Update Persistent World State
+        # -------------------------
 
+        self.world_state.add_evidence({
+            "query": query,
+            "context": context,
+            "retrieval_status": retrieval_result.get(
+                "status"
+            ),
+            "evidence_status": retrieval_result.get(
+                "grading",
+                {}
+            ).get("status")
+        })
         # -------------------------
         # 2. Check retrieval quality
         # -------------------------
@@ -107,7 +126,15 @@ class CRAGLlamaPipeline:
             query,
             context
         )
+        # -------------------------
+        # Persist generated answer
+        # -------------------------
 
+        self.world_state.add_evidence({
+            "type": "generated_answer",
+            "query": query,
+            "answer": answer
+        })
         # -------------------------
         # 5. Existing claim verification
         # -------------------------
@@ -162,6 +189,34 @@ class CRAGLlamaPipeline:
                 consistency_agent_result
             )
         )
+        # -------------------------
+        # Update Belief Graph
+        # -------------------------
+
+        beliefs = self.belief_graph.update_from_verification(
+            query=query,
+            answer=answer,
+            consensus_result=consensus_result
+        )
+        # -------------------------
+        # Persist reasoning result
+        # -------------------------
+
+        self.world_state.add_verification({
+            "query": query,
+            "consensus_status": consensus_result.get(
+                "status"
+            ),
+            "evidence_agent": evidence_agent_result.get(
+                "status"
+            ),
+            "graph_agent": graph_agent_result.get(
+                "status"
+            ),
+            "consistency_agent": consistency_agent_result.get(
+                "status"
+            )
+        })
 
         # -------------------------
         # 10. Final response
@@ -194,7 +249,28 @@ class CRAGLlamaPipeline:
 
                 "consensus":
                     consensus_result
-            }
+            },
+
+            # New Belief Graph
+            "beliefs": [
+                {
+                    "belief_id":
+                        belief.belief_id,
+
+                    "claim":
+                        belief.claim,
+
+                    "status":
+                        belief.status,
+
+                    "entity_ids":
+                        belief.entity_ids,
+
+                    "verification_status":
+                        belief.verification_status
+                }
+                for belief in beliefs
+            ]
         }
 
     def close(self):
@@ -204,3 +280,6 @@ class CRAGLlamaPipeline:
         # Graph Agent maintains its own
         # Neo4j connection.
         self.graph_agent.close()
+
+    def get_world_state(self):
+        return self.world_state.get_state()
