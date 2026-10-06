@@ -21,6 +21,7 @@ from world_state.manager import (
     WorldStateManager
 )
 from belief_graph.manager import BeliefGraphManager
+from hypotheses.generator import HypothesisGenerator
 class CRAGLlamaPipeline:
 
     def __init__(self):
@@ -41,6 +42,7 @@ class CRAGLlamaPipeline:
         self.belief_graph = BeliefGraphManager(
             self.world_state
         )
+        self.hypothesis_generator = HypothesisGenerator()
     def run(self, query):
 
         # -------------------------
@@ -199,6 +201,43 @@ class CRAGLlamaPipeline:
             consensus_result=consensus_result
         )
         # -------------------------
+        # Generate Hypotheses
+        # -------------------------
+
+        hypotheses = self.hypothesis_generator.generate(
+            query=query,
+            answer=answer,
+            consensus_result=consensus_result,
+            beliefs=beliefs
+        )
+        # -------------------------
+        # Persist Hypotheses
+        # -------------------------
+
+        for hypothesis in hypotheses:
+            self.world_state.add_hypothesis({
+                "hypothesis_id":
+                    hypothesis.hypothesis_id,
+
+                "statement":
+                    hypothesis.statement,
+
+                "status":
+                    hypothesis.status,
+
+                "entity_ids":
+                    hypothesis.entity_ids,
+
+                "belief_ids":
+                    hypothesis.belief_ids,
+
+                "verification_status":
+                    hypothesis.verification_status,
+
+                "metadata":
+                    hypothesis.metadata
+            })
+        # -------------------------
         # Persist reasoning result
         # -------------------------
 
@@ -270,6 +309,29 @@ class CRAGLlamaPipeline:
                         belief.verification_status
                 }
                 for belief in beliefs
+            ],
+            # New Hypothesis Generation
+            "hypotheses": [
+                {
+                    "hypothesis_id":
+                        hypothesis.hypothesis_id,
+
+                    "statement":
+                        hypothesis.statement,
+
+                    "status":
+                        hypothesis.status,
+
+                    "entity_ids":
+                        hypothesis.entity_ids,
+
+                    "belief_ids":
+                        hypothesis.belief_ids,
+
+                    "verification_status":
+                        hypothesis.verification_status
+                }
+                for hypothesis in hypotheses
             ]
         }
 

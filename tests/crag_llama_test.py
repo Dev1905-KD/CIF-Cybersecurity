@@ -346,6 +346,42 @@ try:
         )
 
         print()
+    print()
+    print("Hypothesis Generation:")
+    print("=" * 60)
+
+    for hypothesis in result.get("hypotheses", []):
+        print(
+            f"Hypothesis ID: "
+            f"{hypothesis['hypothesis_id']}"
+        )
+
+        print(
+            f"Statement: "
+            f"{hypothesis['statement']}"
+        )
+
+        print(
+            f"Status: "
+            f"{hypothesis['status']}"
+        )
+
+        print(
+            f"Entities: "
+            f"{hypothesis['entity_ids']}"
+        )
+
+        print(
+            f"Belief IDs: "
+            f"{hypothesis['belief_ids']}"
+        )
+
+        print(
+            f"Verification: "
+            f"{hypothesis['verification_status']}"
+        )
+
+        print()
 finally:
 
     pipeline.close()
