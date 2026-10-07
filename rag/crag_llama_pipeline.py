@@ -1,40 +1,27 @@
 from rag.pipeline import CRAGPipeline
 from llm.generator import EvidenceGenerator
 from claim_verification.verifier import ClaimVerifier
-
-from agents.evidence_agent import (
-    EvidenceAgent
-)
-
-from agents.graph_agent import (
-    GraphAgent
-)
-
-from agents.consistency_agent import (
-    ConsistencyAgent
-)
-
-from agents.consensus import (
-    ConsensusAgent
-)
-from world_state.manager import (
-    WorldStateManager
-)
+from agents.evidence_agent import EvidenceAgent
+from agents.graph_agent import GraphAgent
+from agents.consistency_agent import ConsistencyAgent
+from agents.consensus import ConsensusAgent
+from world_state.manager import WorldStateManager
 from belief_graph.manager import BeliefGraphManager
 from hypotheses.generator import HypothesisGenerator
-from belief_revision.revision import (
-    BeliefRevisionEngine
-)
+from belief_revision.revision import BeliefRevisionEngine
 from simulation.scenario import SimulationScenario
 from simulation.simulator import SimulationEngine
+from simulation.evaluator import SimulationEvaluator
+from adaptive_retrieval.manager import AdaptiveRetrievalManager
+
+
 class CRAGLlamaPipeline:
 
     def __init__(self):
-
         self.crag = CRAGPipeline()
         self.generator = EvidenceGenerator()
         self.verifier = ClaimVerifier()
-        
+
         # ---------------------------------
         # Multi-Agent Verification
         # ---------------------------------
@@ -43,46 +30,144 @@ class CRAGLlamaPipeline:
         self.graph_agent = GraphAgent()
         self.consistency_agent = ConsistencyAgent()
         self.consensus_agent = ConsensusAgent()
+
+        # ---------------------------------
+        # Persistent World State
+        # ---------------------------------
+
         self.world_state = WorldStateManager()
+
+        # ---------------------------------
+        # Belief Graph
+        # ---------------------------------
+
         self.belief_graph = BeliefGraphManager(
             self.world_state
         )
+
+        # ---------------------------------
+        # Hypothesis Generation
+        # ---------------------------------
+
         self.hypothesis_generator = HypothesisGenerator()
+
+        # ---------------------------------
+        # Belief Revision
+        # ---------------------------------
+
         self.belief_revision = BeliefRevisionEngine()
+
+        # ---------------------------------
+        # Simulation
+        # ---------------------------------
+
         self.simulation_engine = SimulationEngine()
-    def run(self, query):
+        self.simulation_evaluator = SimulationEvaluator()
 
-        # -------------------------
-        # 1. Corrective Retrieval
-        # -------------------------
+        # ---------------------------------
+        # Adaptive Retrieval
+        # ---------------------------------
 
-        retrieval_result = (
-            self.crag.run(query)
+        self.adaptive_retrieval = AdaptiveRetrievalManager(
+            retriever=self.crag,
+            max_attempts=3
         )
 
-        if retrieval_result.get(
-            "status"
-        ) == "error":
+    def run(self, query):
 
-            return retrieval_result
+        # ---------------------------------
+        # 1. Adaptive Corrective Retrieval
+        # ---------------------------------
+
+        adaptive_retrieval_result = (
+            self.adaptive_retrieval.retrieve(query)
+        )
+
+        retrieval_result = (
+            adaptive_retrieval_result.get(
+                "retrieval_result",
+                {}
+            )
+        )
+
+        if retrieval_result.get("status") == "error":
+            return {
+                "status": "error",
+                "message": retrieval_result.get(
+                    "message",
+                    "Adaptive retrieval failed."
+                ),
+                "adaptive_retrieval": (
+                    adaptive_retrieval_result
+                )
+            }
 
         context = retrieval_result.get(
             "context",
             ""
         )
-        # -------------------------
-        # Update Persistent World State
-        # -------------------------
 
-        retrieval_evidence_id = self.world_state.add_evidence({
-            "query": query,
-            "context": context,
-            "retrieval_status": retrieval_result.get("status"),
-            "evidence_status": retrieval_result.get("grading", {}).get("status")
-        })
-        # -------------------------
-        # 2. Check retrieval quality
-        # -------------------------
+        # ---------------------------------
+        # Persist Adaptive Retrieval State
+        # ---------------------------------
+
+        self.world_state.add_verification(
+            {
+                "type": "adaptive_retrieval",
+                "query": query,
+                "attempts": (
+                    adaptive_retrieval_result.get(
+                        "attempts",
+                        []
+                    )
+                ),
+                "final_decision": (
+                    adaptive_retrieval_result.get(
+                        "final_decision",
+                        {}
+                    )
+                ),
+                "final_grading": (
+                    retrieval_result.get(
+                        "grading",
+                        {}
+                    )
+                )
+            }
+        )
+
+        # ---------------------------------
+        # Update Persistent World State
+        # ---------------------------------
+
+        retrieval_evidence_id = (
+            self.world_state.add_evidence(
+                {
+                    "query": query,
+                    "context": context,
+                    "retrieval_status": (
+                        retrieval_result.get(
+                            "status"
+                        )
+                    ),
+                    "evidence_status": (
+                        retrieval_result.get(
+                            "grading",
+                            {}
+                        ).get(
+                            "status"
+                        )
+                    ),
+                    "adaptive_retrieval": (
+                        adaptive_retrieval_result
+                    )
+                }
+            )
+        )
+
+        # ---------------------------------
+        # 2. Check Retrieval Quality
+        # ---------------------------------
 
         grading = retrieval_result.get(
             "grading",
@@ -92,9 +177,6 @@ class CRAGLlamaPipeline:
         status = grading.get(
             "status"
         )
-
-        # Map retrieval quality to
-        # human-readable evidence status
 
         evidence_status = {
             "relevant": "Strongly supported",
@@ -107,41 +189,61 @@ class CRAGLlamaPipeline:
             "Unknown"
         )
 
-        # -------------------------
-        # 3. Stop if evidence is insufficient
-        # -------------------------
+        # ---------------------------------
+        # 3. Stop if Evidence is Insufficient
+        # ---------------------------------
 
-        if status == "irrelevant":
+        final_decision = (
+            adaptive_retrieval_result.get(
+                "final_decision",
+                {}
+            )
+        )
 
+        if (
+            status == "irrelevant"
+            or final_decision.get(
+                "action"
+            ) == "reject"
+        ):
             return {
                 "status": "insufficient_evidence",
                 "evidence_status": status_label,
-                "message":
+                "message": (
                     "The available evidence is "
-                    "insufficient to answer reliably.",
-                "retrieval": retrieval_result
+                    "insufficient to answer reliably "
+                    "after adaptive retrieval."
+                ),
+                "retrieval": retrieval_result,
+                "adaptive_retrieval": (
+                    adaptive_retrieval_result
+                )
             }
 
-        # -------------------------
-        # 4. Llama generation
-        # -------------------------
+        # ---------------------------------
+        # 4. Llama Generation
+        # ---------------------------------
 
         answer = self.generator.generate(
             query,
             context
         )
-        # -------------------------
-        # Persist generated answer
-        # -------------------------
 
-        self.world_state.add_evidence({
-            "type": "generated_answer",
-            "query": query,
-            "answer": answer
-        })
-        # -------------------------
-        # 5. Existing claim verification
-        # -------------------------
+        # ---------------------------------
+        # Persist Generated Answer
+        # ---------------------------------
+
+        self.world_state.add_evidence(
+            {
+                "type": "generated_answer",
+                "query": query,
+                "answer": answer
+            }
+        )
+
+        # ---------------------------------
+        # 5. Existing Claim Verification
+        # ---------------------------------
 
         claim_verification = (
             self.verifier.verify_claims(
@@ -150,9 +252,9 @@ class CRAGLlamaPipeline:
             )
         )
 
-        # -------------------------
+        # ---------------------------------
         # 6. Evidence Agent
-        # -------------------------
+        # ---------------------------------
 
         evidence_agent_result = (
             self.evidence_agent.verify(
@@ -161,9 +263,9 @@ class CRAGLlamaPipeline:
             )
         )
 
-        # -------------------------
+        # ---------------------------------
         # 7. Graph Agent
-        # -------------------------
+        # ---------------------------------
 
         graph_agent_result = (
             self.graph_agent.verify(
@@ -171,9 +273,9 @@ class CRAGLlamaPipeline:
             )
         )
 
-        # -------------------------
+        # ---------------------------------
         # 8. Consistency Agent
-        # -------------------------
+        # ---------------------------------
 
         consistency_agent_result = (
             self.consistency_agent.verify(
@@ -182,9 +284,9 @@ class CRAGLlamaPipeline:
             )
         )
 
-        # -------------------------
+        # ---------------------------------
         # 9. Consensus Agent
-        # -------------------------
+        # ---------------------------------
 
         consensus_result = (
             self.consensus_agent.evaluate(
@@ -193,75 +295,83 @@ class CRAGLlamaPipeline:
                 consistency_agent_result
             )
         )
-        # -------------------------
+
+        # ---------------------------------
         # Update Belief Graph
-        # -------------------------
+        # ---------------------------------
 
-        beliefs = self.belief_graph.update_from_verification(
-            query=query,
-            answer=answer,
-            consensus_result=consensus_result
+        beliefs = (
+            self.belief_graph.update_from_verification(
+                query=query,
+                answer=answer,
+                consensus_result=consensus_result
+            )
         )
-        
-        # -------------------------
+
+        # ---------------------------------
         # Generate Hypotheses
-        # -------------------------
+        # ---------------------------------
 
-        hypotheses = self.hypothesis_generator.generate(
-            query=query,
-            answer=answer,
-            consensus_result=consensus_result,
-            beliefs=beliefs
+        hypotheses = (
+            self.hypothesis_generator.generate(
+                query=query,
+                answer=answer,
+                consensus_result=consensus_result,
+                beliefs=beliefs
+            )
         )
-        # -------------------------
-        # Belief Revision
-        # -------------------------
+
+        # ---------------------------------
+        # Initial Belief Revision
+        # ---------------------------------
 
         revision_results = []
 
         for belief in beliefs:
-
-            revision_result = self.belief_revision.revise(
-                belief=belief,
-                consensus_status=consensus_result.get("status", "Needs Review"),
-                evidence_ids=[retrieval_evidence_id]
+            revision_result = (
+                self.belief_revision.revise(
+                    belief=belief,
+                    consensus_status=(
+                        consensus_result.get(
+                            "status",
+                            "Needs Review"
+                        )
+                    ),
+                    evidence_ids=[
+                        retrieval_evidence_id
+                    ]
+                )
             )
 
             revision_results.append(
                 revision_result
             )
 
-            # Sync revised belief with World State
             self.world_state.set_belief(
                 belief.belief_id,
                 {
-                    "belief_id":
-                        belief.belief_id,
-
-                    "claim":
-                        belief.claim,
-
-                    "status":
-                        belief.status,
-
-                    "evidence_ids":
-                        belief.evidence_ids,
-
-                    "entity_ids":
-                        belief.entity_ids,
-
-                    "verification_status":
-                        belief.verification_status,
-
-                    "metadata":
-                        belief.metadata,
-
-                    "updated_at":
-                        belief.updated_at
+                    "belief_id": belief.belief_id,
+                    "claim": belief.claim,
+                    "status": belief.status,
+                    "evidence_ids": belief.evidence_ids,
+                    "entity_ids": belief.entity_ids,
+                    "verification_status": (
+                        belief.verification_status
+                    ),
+                    "metadata": belief.metadata,
+                    "updated_at": belief.updated_at
                 }
             )
+
+        # ---------------------------------
+        # Build Simulation Scenario
+        # ---------------------------------
+
         simulation_scenario = SimulationScenario(
-            scenario_id=f"simulation-{query[:30].lower().replace(' ', '-')}",
+            scenario_id=(
+                f"simulation-"
+                f"{query[:30].lower().replace(' ', '-')}"
+            ),
             title="Cybersecurity Investigation Simulation",
             description=query,
             initial_beliefs=[
@@ -283,169 +393,322 @@ class CRAGLlamaPipeline:
 
         simulation_scenario.set_variable(
             "consensus_status",
-            consensus_result.get("status", "Needs Review")
+            consensus_result.get(
+                "status",
+                "Needs Review"
+            )
         )
 
-        simulation_result = self.simulation_engine.run(
-            simulation_scenario
+        # ---------------------------------
+        # Run Simulation
+        # ---------------------------------
+
+        simulation_result = (
+            self.simulation_engine.run(
+                simulation_scenario
+            )
         )
 
         self.world_state.add_simulation(
             simulation_result.to_dict()
-        )    
-        # -------------------------
+        )
+
+        # ---------------------------------
         # Persist Hypotheses
-        # -------------------------
+        # ---------------------------------
 
         for hypothesis in hypotheses:
-            self.world_state.add_hypothesis({
-                "hypothesis_id":
-                    hypothesis.hypothesis_id,
-
-                "statement":
-                    hypothesis.statement,
-
-                "status":
-                    hypothesis.status,
-
-                "entity_ids":
-                    hypothesis.entity_ids,
-
-                "belief_ids":
-                    hypothesis.belief_ids,
-
-                "verification_status":
-                    hypothesis.verification_status,
-
-                "metadata":
-                    hypothesis.metadata
-            })
-        # -------------------------
-        # Persist reasoning result
-        # -------------------------
-
-        self.world_state.add_verification({
-            "query": query,
-            "consensus_status": consensus_result.get(
-                "status"
-            ),
-            "evidence_agent": evidence_agent_result.get(
-                "status"
-            ),
-            "graph_agent": graph_agent_result.get(
-                "status"
-            ),
-            "consistency_agent": consistency_agent_result.get(
-                "status"
+            self.world_state.add_hypothesis(
+                {
+                    "hypothesis_id": (
+                        hypothesis.hypothesis_id
+                    ),
+                    "statement": (
+                        hypothesis.statement
+                    ),
+                    "status": hypothesis.status,
+                    "entity_ids": (
+                        hypothesis.entity_ids
+                    ),
+                    "belief_ids": (
+                        hypothesis.belief_ids
+                    ),
+                    "verification_status": (
+                        hypothesis.verification_status
+                    ),
+                    "metadata": hypothesis.metadata
+                }
             )
-        })
 
-        # -------------------------
-        # 10. Final response
-        # -------------------------
+        # ---------------------------------
+        # Evaluate Hypotheses Against Simulation
+        # ---------------------------------
+
+        hypothesis_evaluations = []
+
+        for hypothesis in hypotheses:
+            evaluation = (
+                self.simulation_evaluator.evaluate(
+                    hypothesis={
+                        "hypothesis_id": (
+                            hypothesis.hypothesis_id
+                        ),
+                        "status": hypothesis.status
+                    },
+                    simulation_result=(
+                        simulation_result.to_dict()
+                    )
+                )
+            )
+
+            hypothesis_evaluations.append(
+                evaluation
+            )
+
+        # ---------------------------------
+        # Simulation-Driven Belief Revision
+        # ---------------------------------
+
+        simulation_belief_revisions = []
+
+        for evaluation in hypothesis_evaluations:
+            hypothesis_id = evaluation.get(
+                "hypothesis_id"
+            )
+
+            matching_hypothesis = next(
+                (
+                    hypothesis
+                    for hypothesis in hypotheses
+                    if hypothesis.hypothesis_id
+                    == hypothesis_id
+                ),
+                None
+            )
+
+            if matching_hypothesis is None:
+                continue
+
+            for belief in beliefs:
+                if (
+                    belief.belief_id
+                    not in matching_hypothesis.belief_ids
+                ):
+                    continue
+
+                simulation_revision = (
+                    self.belief_revision.revise_from_simulation(
+                        belief=belief,
+                        hypothesis_evaluation=evaluation,
+                        evidence_ids=[
+                            retrieval_evidence_id
+                        ]
+                    )
+                )
+
+                simulation_belief_revisions.append(
+                    simulation_revision
+                )
+
+                self.world_state.set_belief(
+                    belief.belief_id,
+                    {
+                        "belief_id": belief.belief_id,
+                        "claim": belief.claim,
+                        "status": belief.status,
+                        "evidence_ids": (
+                            belief.evidence_ids
+                        ),
+                        "entity_ids": (
+                            belief.entity_ids
+                        ),
+                        "verification_status": (
+                            belief.verification_status
+                        ),
+                        "metadata": belief.metadata,
+                        "updated_at": belief.updated_at
+                    }
+                )
+
+                self.world_state.add_verification(
+                    {
+                        "type": (
+                            "simulation_belief_revision"
+                        ),
+                        "belief_id": (
+                            belief.belief_id
+                        ),
+                        "hypothesis_id": (
+                            hypothesis_id
+                        ),
+                        "evaluation_status": (
+                            evaluation.get(
+                                "evaluation_status"
+                            )
+                        ),
+                        "new_status": (
+                            simulation_revision.new_status
+                        ),
+                        "revision_type": (
+                            simulation_revision.revision_type
+                        ),
+                        "reason": (
+                            simulation_revision.reason
+                        )
+                    }
+                )
+
+        # ---------------------------------
+        # Persist Final Reasoning Result
+        # ---------------------------------
+
+        self.world_state.add_verification(
+            {
+                "query": query,
+                "consensus_status": (
+                    consensus_result.get(
+                        "status"
+                    )
+                ),
+                "evidence_agent": (
+                    evidence_agent_result.get(
+                        "status"
+                    )
+                ),
+                "graph_agent": (
+                    graph_agent_result.get(
+                        "status"
+                    )
+                ),
+                "consistency_agent": (
+                    consistency_agent_result.get(
+                        "status"
+                    )
+                )
+            }
+        )
+
+        # ---------------------------------
+        # Final Response
+        # ---------------------------------
 
         return {
             "status": "success",
             "evidence_status": status_label,
             "answer": answer,
 
-            # Existing verification
-            "claim_verification":
-                claim_verification,
+            "adaptive_retrieval": (
+                adaptive_retrieval_result
+            ),
 
-            # Existing retrieval
-            "retrieval":
-                retrieval_result,
+            "claim_verification": (
+                claim_verification
+            ),
 
-            # New multi-agent verification
+            "retrieval": retrieval_result,
+
             "multi_agent_verification": {
-
-                "evidence_agent":
-                    evidence_agent_result,
-
-                "graph_agent":
-                    graph_agent_result,
-
-                "consistency_agent":
-                    consistency_agent_result,
-
-                "consensus":
+                "evidence_agent": (
+                    evidence_agent_result
+                ),
+                "graph_agent": (
+                    graph_agent_result
+                ),
+                "consistency_agent": (
+                    consistency_agent_result
+                ),
+                "consensus": (
                     consensus_result
+                )
             },
 
-            # New Belief Graph
             "beliefs": [
                 {
-                    "belief_id":
-                        belief.belief_id,
-
-                    "claim":
-                        belief.claim,
-
-                    "status":
-                        belief.status,
-
-                    "entity_ids":
-                        belief.entity_ids,
-
-                    "verification_status":
+                    "belief_id": belief.belief_id,
+                    "claim": belief.claim,
+                    "status": belief.status,
+                    "entity_ids": belief.entity_ids,
+                    "verification_status": (
                         belief.verification_status
+                    )
                 }
                 for belief in beliefs
             ],
-            # New Hypothesis Generation
+
             "hypotheses": [
                 {
-                    "hypothesis_id":
-                        hypothesis.hypothesis_id,
-
-                    "statement":
-                        hypothesis.statement,
-
-                    "status":
-                        hypothesis.status,
-
-                    "entity_ids":
-                        hypothesis.entity_ids,
-
-                    "belief_ids":
-                        hypothesis.belief_ids,
-
-                    "verification_status":
+                    "hypothesis_id": (
+                        hypothesis.hypothesis_id
+                    ),
+                    "statement": (
+                        hypothesis.statement
+                    ),
+                    "status": hypothesis.status,
+                    "entity_ids": (
+                        hypothesis.entity_ids
+                    ),
+                    "belief_ids": (
+                        hypothesis.belief_ids
+                    ),
+                    "verification_status": (
                         hypothesis.verification_status
+                    )
                 }
                 for hypothesis in hypotheses
             ],
+
             "belief_revisions": [
                 {
-                    "belief_id":
-                        revision.belief_id,
-
-                    "previous_status":
-                        revision.previous_status,
-
-                    "new_status":
-                        revision.new_status,
-
-                    "revision_type":
-                        revision.revision_type,
-
-                    "reason":
-                        revision.reason,
-
-                    "evidence_ids":
-                        revision.evidence_ids,
-
-                    "timestamp":
-                        revision.timestamp
+                    "belief_id": revision.belief_id,
+                    "previous_status": (
+                        revision.previous_status
+                    ),
+                    "new_status": (
+                        revision.new_status
+                    ),
+                    "revision_type": (
+                        revision.revision_type
+                    ),
+                    "reason": revision.reason,
+                    "evidence_ids": (
+                        revision.evidence_ids
+                    ),
+                    "timestamp": revision.timestamp
                 }
                 for revision in revision_results
             ],
-            "simulation": simulation_result.to_dict(),
+
+            "simulation": (
+                simulation_result.to_dict()
+            ),
+
+            "hypothesis_evaluations": (
+                hypothesis_evaluations
+            ),
+
+            "simulation_belief_revisions": [
+                {
+                    "belief_id": revision.belief_id,
+                    "previous_status": (
+                        revision.previous_status
+                    ),
+                    "new_status": (
+                        revision.new_status
+                    ),
+                    "revision_type": (
+                        revision.revision_type
+                    ),
+                    "reason": revision.reason,
+                    "evidence_ids": (
+                        revision.evidence_ids
+                    ),
+                    "timestamp": revision.timestamp
+                }
+                for revision in simulation_belief_revisions
+            ]
         }
 
     def close(self):
-
         self.crag.close()
 
         # Graph Agent maintains its own
