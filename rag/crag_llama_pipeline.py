@@ -25,6 +25,8 @@ from hypotheses.generator import HypothesisGenerator
 from belief_revision.revision import (
     BeliefRevisionEngine
 )
+from simulation.scenario import SimulationScenario
+from simulation.simulator import SimulationEngine
 class CRAGLlamaPipeline:
 
     def __init__(self):
@@ -47,6 +49,7 @@ class CRAGLlamaPipeline:
         )
         self.hypothesis_generator = HypothesisGenerator()
         self.belief_revision = BeliefRevisionEngine()
+        self.simulation_engine = SimulationEngine()
     def run(self, query):
 
         # -------------------------
@@ -257,6 +260,39 @@ class CRAGLlamaPipeline:
                         belief.updated_at
                 }
             )
+        simulation_scenario = SimulationScenario(
+            scenario_id=f"simulation-{query[:30].lower().replace(' ', '-')}",
+            title="Cybersecurity Investigation Simulation",
+            description=query,
+            initial_beliefs=[
+                belief.belief_id
+                for belief in beliefs
+            ]
+        )
+
+        for belief in beliefs:
+            for entity_id in belief.entity_ids:
+                simulation_scenario.add_entity(
+                    entity_id=entity_id,
+                    entity_type="InvestigationEntity",
+                    properties={
+                        "belief_id": belief.belief_id,
+                        "belief_status": belief.status
+                    }
+                )
+
+        simulation_scenario.set_variable(
+            "consensus_status",
+            consensus_result.get("status", "Needs Review")
+        )
+
+        simulation_result = self.simulation_engine.run(
+            simulation_scenario
+        )
+
+        self.world_state.add_simulation(
+            simulation_result.to_dict()
+        )    
         # -------------------------
         # Persist Hypotheses
         # -------------------------
@@ -404,7 +440,8 @@ class CRAGLlamaPipeline:
                         revision.timestamp
                 }
                 for revision in revision_results
-            ]
+            ],
+            "simulation": simulation_result.to_dict(),
         }
 
     def close(self):

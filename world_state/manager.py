@@ -104,6 +104,19 @@ class WorldStateManager:
 
         self.state.increment_version()
 
+    def add_simulation(self, simulation: dict[str, Any]):
+        simulation["timestamp"] = datetime.utcnow().isoformat()
+
+        self.state.simulation_history.append(
+            simulation
+        )
+
+        self.state.increment_version()
+
+        return simulation
+    
+        
+
     # ---------------------------------
     # State access
     # ---------------------------------
@@ -134,5 +147,8 @@ class WorldStateManager:
             ),
             "verification_count": len(
                 self.state.verification_history
+            ),
+            "simulation_count": len(
+                self.state.simulation_history
             )
         }

@@ -46,7 +46,7 @@ class WorldState:
     verification_history: list[dict[str, Any]] = field(
         default_factory=list
     )
-
+    simulation_history: list[dict[str, Any]] = field(default_factory=list)
     # ---------------------------------
     # State metadata
     # ---------------------------------

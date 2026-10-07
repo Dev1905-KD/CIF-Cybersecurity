@@ -275,6 +275,7 @@ try:
             "\nMessage:",
             result.get("message")
         )
+
     # ---------------------------------
     # Persistent World State
     # ---------------------------------
@@ -315,11 +316,24 @@ try:
             world_state.verification_history
         )
     )
+
+    print(
+        "Simulation Records:",
+        len(
+            world_state.simulation_history
+        )
+    )
+
+    # ---------------------------------
+    # Belief Graph
+    # ---------------------------------
+
     print()
     print("Belief Graph:")
     print("=" * 60)
 
     for belief in result.get("beliefs", []):
+
         print(
             f"Belief ID: "
             f"{belief['belief_id']}"
@@ -346,11 +360,17 @@ try:
         )
 
         print()
+
+    # ---------------------------------
+    # Hypothesis Generation
+    # ---------------------------------
+
     print()
     print("Hypothesis Generation:")
     print("=" * 60)
 
     for hypothesis in result.get("hypotheses", []):
+
         print(
             f"Hypothesis ID: "
             f"{hypothesis['hypothesis_id']}"
@@ -382,6 +402,11 @@ try:
         )
 
         print()
+
+    # ---------------------------------
+    # Belief Revisions
+    # ---------------------------------
+
     print()
     print("Belief Revisions:")
     print("=" * 60)
@@ -390,6 +415,7 @@ try:
         "belief_revisions",
         []
     ):
+
         print(
             f"Belief ID: "
             f"{revision['belief_id']}"
@@ -425,7 +451,59 @@ try:
             f"{revision['timestamp']}"
         )
 
-        print()    
+        print()
+
+    # ---------------------------------
+    # Simulation
+    # ---------------------------------
+
+    simulation = result.get(
+        "simulation"
+    )
+
+    if simulation:
+
+        print()
+        print("Simulation:")
+        print("=" * 60)
+
+        print(
+            f"Scenario ID: "
+            f"{simulation['scenario_id']}"
+        )
+
+        print("\nInitial State:")
+        print(
+            simulation["initial_state"]
+        )
+
+        print("\nSimulation Events:")
+
+        for event in simulation.get(
+            "events",
+            []
+        ):
+
+            print(
+                event
+            )
+
+        print("\nSimulation Outcomes:")
+
+        for outcome in simulation.get(
+            "outcomes",
+            []
+        ):
+
+            print(
+                outcome
+            )
+
+        print("\nFinal State:")
+        print(
+            simulation["final_state"]
+        )
+
 finally:
 
     pipeline.close()
