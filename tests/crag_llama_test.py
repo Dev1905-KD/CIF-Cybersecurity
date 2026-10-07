@@ -402,7 +402,50 @@ try:
         )
 
         print()
+        # ---------------------------------
+    # Hypothesis Evaluation
+    # ---------------------------------
 
+    print()
+    print("Hypothesis Evaluation:")
+    print("=" * 60)
+
+    for evaluation in result.get(
+        "hypothesis_evaluations",
+        []
+    ):
+
+        print(
+            f"Hypothesis ID: "
+            f"{evaluation['hypothesis_id']}"
+        )
+
+        print(
+            f"Evaluation Status: "
+            f"{evaluation['evaluation_status']}"
+        )
+
+        print(
+            f"Reason: "
+            f"{evaluation['reason']}"
+        )
+
+        print(
+            f"Simulation Scenario: "
+            f"{evaluation['simulation_scenario_id']}"
+        )
+
+        print(
+            f"Outcome Count: "
+            f"{evaluation['outcome_count']}"
+        )
+
+        print(
+            f"Simulation Completed: "
+            f"{evaluation['simulation_completed']}"
+        )
+
+        print()
     # ---------------------------------
     # Belief Revisions
     # ---------------------------------

@@ -56,6 +56,8 @@ class BeliefRevisionResult:
         default_factory=lambda:
         datetime.utcnow().isoformat()
     )
+
+
 class BeliefRevisionEngine:
 
     # ---------------------------------
@@ -115,6 +117,96 @@ class BeliefRevisionEngine:
         )
 
     # ---------------------------------
+    # Simulation-driven belief revision
+    # ---------------------------------
+
+    def revise_from_simulation(
+        self,
+        belief,
+        hypothesis_evaluation: dict[str, Any],
+        evidence_ids: list[str] | None = None
+    ):
+
+        previous_status = belief.status
+
+        evaluation_status = (
+            hypothesis_evaluation.get(
+                "evaluation_status",
+                "needs_review"
+            )
+        )
+
+        new_status = (
+            self._determine_simulation_status(
+                evaluation_status
+            )
+        )
+
+        revision_type = (
+            self._determine_revision_type(
+                previous_status,
+                new_status
+            )
+        )
+
+        reason = self._build_simulation_reason(
+            previous_status,
+            new_status,
+            evaluation_status,
+            hypothesis_evaluation.get(
+                "reason",
+                ""
+            )
+        )
+
+        if evidence_ids is None:
+            evidence_ids = []
+
+        # Update the actual belief using the
+        # result of the simulation evaluation.
+        belief.update(
+            status=new_status,
+            evidence_ids=evidence_ids,
+            verification_status=(
+                f"simulation_{evaluation_status}"
+            )
+        )
+
+        return BeliefRevisionResult(
+            belief_id=belief.belief_id,
+            previous_status=previous_status,
+            new_status=new_status,
+            revision_type=revision_type,
+            reason=reason,
+            evidence_ids=evidence_ids,
+            metadata={
+                "revision_source":
+                    "simulation",
+                "evaluation_status":
+                    evaluation_status,
+                "simulation_scenario_id":
+                    hypothesis_evaluation.get(
+                        "simulation_scenario_id"
+                    ),
+                "outcome_count":
+                    hypothesis_evaluation.get(
+                        "outcome_count",
+                        0
+                    ),
+                "simulation_completed":
+                    hypothesis_evaluation.get(
+                        "simulation_completed",
+                        False
+                    ),
+                "evaluation_reason":
+                    hypothesis_evaluation.get(
+                        "reason",
+                        ""
+                    )
+            }
+        )
+
+    # ---------------------------------
     # Map consensus to belief status
     # ---------------------------------
 
@@ -132,6 +224,28 @@ class BeliefRevisionEngine:
         return status_mapping.get(
             consensus_status,
             "unknown"
+        )
+
+    # ---------------------------------
+    # Map simulation evaluation to
+    # belief status
+    # ---------------------------------
+
+    def _determine_simulation_status(
+        self,
+        evaluation_status: str
+    ):
+
+        status_mapping = {
+            "supported": "supported",
+            "needs_review": "needs_review",
+            "contradicted": "inconsistent",
+            "proposed": "needs_review"
+        }
+
+        return status_mapping.get(
+            evaluation_status,
+            "needs_review"
         )
 
     # ---------------------------------
@@ -212,4 +326,56 @@ class BeliefRevisionEngine:
             f"{previous_status} to {new_status} "
             f"based on consensus status "
             f"{consensus_status}."
-        )    
+        )
+
+    # ---------------------------------
+    # Explain simulation-driven revision
+    # ---------------------------------
+
+    def _build_simulation_reason(
+        self,
+        previous_status: str,
+        new_status: str,
+        evaluation_status: str,
+        evaluation_reason: str
+    ):
+
+        if previous_status == new_status:
+            return (
+                "The simulation evaluation did not "
+                "change the current belief status. "
+                f"Simulation evaluation status: "
+                f"{evaluation_status}. "
+                f"{evaluation_reason}"
+            )
+
+        if new_status == "supported":
+            return (
+                "Simulation evaluation supports "
+                "strengthening the belief. "
+                f"{evaluation_reason}"
+            )
+
+        if new_status == "needs_review":
+            return (
+                "Simulation evaluation does not provide "
+                "sufficient support for the belief to remain "
+                "fully supported. "
+                f"{evaluation_reason}"
+            )
+
+        if new_status == "inconsistent":
+            return (
+                "Simulation evaluation indicates that "
+                "the belief is inconsistent with the "
+                "current reasoning state. "
+                f"{evaluation_reason}"
+            )
+
+        return (
+            f"The belief was updated from "
+            f"{previous_status} to {new_status} "
+            f"based on simulation evaluation "
+            f"{evaluation_status}. "
+            f"{evaluation_reason}"
+        )
