@@ -13,6 +13,7 @@ from simulation.scenario import SimulationScenario
 from simulation.simulator import SimulationEngine
 from simulation.evaluator import SimulationEvaluator
 from adaptive_retrieval.manager import AdaptiveRetrievalManager
+from decision.engine import DecisionEngine
 
 
 class CRAGLlamaPipeline:
@@ -72,6 +73,12 @@ class CRAGLlamaPipeline:
             retriever=self.crag,
             max_attempts=3
         )
+
+        # ---------------------------------
+        # Decision Engine
+        # ---------------------------------
+
+        self.decision_engine = DecisionEngine()
 
     def run(self, query):
 
@@ -193,7 +200,7 @@ class CRAGLlamaPipeline:
         # 3. Stop if Evidence is Insufficient
         # ---------------------------------
 
-        final_decision = (
+        final_retrieval_decision = (
             adaptive_retrieval_result.get(
                 "final_decision",
                 {}
@@ -202,7 +209,7 @@ class CRAGLlamaPipeline:
 
         if (
             status == "irrelevant"
-            or final_decision.get(
+            or final_retrieval_decision.get(
                 "action"
             ) == "reject"
         ):
@@ -328,6 +335,7 @@ class CRAGLlamaPipeline:
         revision_results = []
 
         for belief in beliefs:
+
             revision_result = (
                 self.belief_revision.revise(
                     belief=belief,
@@ -353,8 +361,12 @@ class CRAGLlamaPipeline:
                     "belief_id": belief.belief_id,
                     "claim": belief.claim,
                     "status": belief.status,
-                    "evidence_ids": belief.evidence_ids,
-                    "entity_ids": belief.entity_ids,
+                    "evidence_ids": (
+                        belief.evidence_ids
+                    ),
+                    "entity_ids": (
+                        belief.entity_ids
+                    ),
                     "verification_status": (
                         belief.verification_status
                     ),
@@ -381,7 +393,9 @@ class CRAGLlamaPipeline:
         )
 
         for belief in beliefs:
+
             for entity_id in belief.entity_ids:
+
                 simulation_scenario.add_entity(
                     entity_id=entity_id,
                     entity_type="InvestigationEntity",
@@ -409,8 +423,12 @@ class CRAGLlamaPipeline:
             )
         )
 
-        self.world_state.add_simulation(
+        simulation_dict = (
             simulation_result.to_dict()
+        )
+
+        self.world_state.add_simulation(
+            simulation_dict
         )
 
         # ---------------------------------
@@ -418,6 +436,7 @@ class CRAGLlamaPipeline:
         # ---------------------------------
 
         for hypothesis in hypotheses:
+
             self.world_state.add_hypothesis(
                 {
                     "hypothesis_id": (
@@ -447,6 +466,7 @@ class CRAGLlamaPipeline:
         hypothesis_evaluations = []
 
         for hypothesis in hypotheses:
+
             evaluation = (
                 self.simulation_evaluator.evaluate(
                     hypothesis={
@@ -455,9 +475,7 @@ class CRAGLlamaPipeline:
                         ),
                         "status": hypothesis.status
                     },
-                    simulation_result=(
-                        simulation_result.to_dict()
-                    )
+                    simulation_result=simulation_dict
                 )
             )
 
@@ -472,6 +490,7 @@ class CRAGLlamaPipeline:
         simulation_belief_revisions = []
 
         for evaluation in hypothesis_evaluations:
+
             hypothesis_id = evaluation.get(
                 "hypothesis_id"
             )
@@ -490,6 +509,7 @@ class CRAGLlamaPipeline:
                 continue
 
             for belief in beliefs:
+
                 if (
                     belief.belief_id
                     not in matching_hypothesis.belief_ids
@@ -589,10 +609,10 @@ class CRAGLlamaPipeline:
         )
 
         # ---------------------------------
-        # Final Response
+        # Build Pipeline State
         # ---------------------------------
 
-        return {
+        pipeline_state = {
             "status": "success",
             "evidence_status": status_label,
             "answer": answer,
@@ -678,9 +698,7 @@ class CRAGLlamaPipeline:
                 for revision in revision_results
             ],
 
-            "simulation": (
-                simulation_result.to_dict()
-            ),
+            "simulation": simulation_dict,
 
             "hypothesis_evaluations": (
                 hypothesis_evaluations
@@ -708,7 +726,39 @@ class CRAGLlamaPipeline:
             ]
         }
 
+        # ---------------------------------
+        # Decision Engine
+        # ---------------------------------
+
+        decision = self.decision_engine.decide(
+            query=query,
+            pipeline_result=pipeline_state
+        )
+
+        decision_result = decision.to_dict()
+
+        # ---------------------------------
+        # Persist Decision
+        # ---------------------------------
+
+        self.world_state.add_verification(
+            {
+                "type": "decision",
+                "query": query,
+                "decision": decision_result
+            }
+        )
+
+        # ---------------------------------
+        # Add Decision to Final Pipeline State
+        # ---------------------------------
+
+        pipeline_state["decision"] = decision_result
+
+        return pipeline_state
+
     def close(self):
+
         self.crag.close()
 
         # Graph Agent maintains its own
@@ -716,4 +766,5 @@ class CRAGLlamaPipeline:
         self.graph_agent.close()
 
     def get_world_state(self):
+
         return self.world_state.get_state()

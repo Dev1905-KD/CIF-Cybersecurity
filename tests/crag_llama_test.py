@@ -332,7 +332,10 @@ try:
     print("Belief Graph:")
     print("=" * 60)
 
-    for belief in result.get("beliefs", []):
+    for belief in result.get(
+        "beliefs",
+        []
+    ):
 
         print(
             f"Belief ID: "
@@ -369,7 +372,10 @@ try:
     print("Hypothesis Generation:")
     print("=" * 60)
 
-    for hypothesis in result.get("hypotheses", []):
+    for hypothesis in result.get(
+        "hypotheses",
+        []
+    ):
 
         print(
             f"Hypothesis ID: "
@@ -402,7 +408,8 @@ try:
         )
 
         print()
-        # ---------------------------------
+
+    # ---------------------------------
     # Hypothesis Evaluation
     # ---------------------------------
 
@@ -446,6 +453,7 @@ try:
         )
 
         print()
+
     # ---------------------------------
     # Belief Revisions
     # ---------------------------------
@@ -545,6 +553,100 @@ try:
         print("\nFinal State:")
         print(
             simulation["final_state"]
+        )
+
+    # ---------------------------------
+    # Decision Engine
+    # ---------------------------------
+
+    decision = result.get(
+        "decision",
+        {}
+    )
+
+    print()
+    print("Decision Engine:")
+    print("=" * 60)
+
+    if decision:
+
+        print(
+            "Decision ID:",
+            decision.get("decision_id")
+        )
+
+        print(
+            "Status:",
+            decision.get("status")
+        )
+
+        print(
+            "Risk Level:",
+            decision.get("risk_level")
+        )
+
+        print(
+            "Rationale:",
+            decision.get("rationale")
+        )
+
+        print(
+            "Verification Status:",
+            decision.get("verification_status")
+        )
+
+        print(
+            "Hypothesis Status:",
+            decision.get("hypothesis_status")
+        )
+
+        print(
+            "Simulation Status:",
+            decision.get("simulation_status")
+        )
+
+        print("\nRecommended Actions:")
+
+        for action in decision.get(
+            "recommended_actions",
+            []
+        ):
+
+            print(
+                f"- {action}"
+            )
+
+        print("\nSupporting Evidence:")
+
+        for evidence in decision.get(
+            "supporting_evidence",
+            []
+        ):
+
+            print(
+                f"- {evidence}"
+            )
+
+        metadata = decision.get(
+            "metadata",
+            {}
+        )
+
+        if metadata:
+
+            print("\nDecision Metadata:")
+
+            for key, value in metadata.items():
+
+                print(
+                    f"{key}: {value}"
+                )
+
+    else:
+
+        print(
+            "No decision was returned by "
+            "the Decision Engine."
         )
 
 finally:
