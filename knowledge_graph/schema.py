@@ -1,4 +1,6 @@
+
 NODE_LABELS = {
+    # Existing CIF entity types
     "ThreatActor",
     "Technique",
     "Tactic",
@@ -8,11 +10,27 @@ NODE_LABELS = {
     "Vulnerability",
     "Product",
     "CWE",
-    "Evidence"
+    "NetworkEvent",
+
+    # CTI / STIX entity types
+    "Indicator",
+    "Identity",
+    "File",
+    "Domain",
+    "URL",
+    "Hostname",
+    "Location",
+    "EmailAddress",
+    "IPAddress",
+    "CryptoWallet",
+
+    # Evidence nodes
+    "Evidence",
 }
 
 
 RELATIONSHIPS = {
+    # Existing CIF relationships
     "USES",
     "TARGETS",
     "EXPLOITS",
@@ -24,12 +42,17 @@ RELATIONSHIPS = {
     "SUPPORTED_BY",
     "MITIGATES",
     "DETECTS",
-    "SUBTECHNIQUE_OF"
+    "SUBTECHNIQUE_OF",
+
+    # CTI / STIX relationships
+    "INDICATES",
+    "BASED_ON",
 }
 
 
 DATA_SOURCES = {
     "MITRE": "MITRE ATT&CK",
     "NVD": "National Vulnerability Database",
-    "KEV": "CISA Known Exploited Vulnerabilities"
+    "KEV": "CISA Known Exploited Vulnerabilities",
+    "CTI": "CTI Dataset (STIX 2.1)",
 }

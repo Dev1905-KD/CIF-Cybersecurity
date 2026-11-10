@@ -1,3 +1,4 @@
+
 from pathlib import Path
 
 from utils import load_json, save_json
@@ -5,10 +6,10 @@ from utils import load_json, save_json
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
-
 MITRE_FILE = BASE_DIR / "data/processed/mitre_entities.json"
 NVD_FILE = BASE_DIR / "data/processed/nvd_vulnerabilities.json"
 KEV_FILE = BASE_DIR / "data/processed/kev_vulnerabilities.json"
+CSTI_FILE = BASE_DIR / "data/processed/csti_entities.json"
 
 OUTPUT_FILE = BASE_DIR / "data/processed/cybersecurity_data.json"
 
@@ -18,21 +19,28 @@ def integrate_data():
     mitre = load_json(MITRE_FILE)
     nvd = load_json(NVD_FILE)
     kev = load_json(KEV_FILE)
+    csti = load_json(CSTI_FILE)
 
     integrated_data = {
         "sources": [
             "MITRE ATT&CK",
             "NVD",
-            "CISA KEV"
+            "CISA KEV",
+            "CTI Dataset (STIX 2.1)"
         ],
         "mitre": mitre,
         "nvd": nvd,
-        "kev": kev
+        "kev": kev,
+        "csti": csti
     }
 
     save_json(integrated_data, OUTPUT_FILE)
 
     print("Data integration completed.")
+    print("Sources:", len(integrated_data["sources"]))
+    print("CSTI entities:", len(csti.get("entities", [])))
+    print("CSTI relationships:", len(csti.get("relationships", [])))
+    print("CSTI evidence:", len(csti.get("evidence", [])))
     print("Saved to:", OUTPUT_FILE)
 
 

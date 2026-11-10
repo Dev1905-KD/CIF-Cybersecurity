@@ -52,6 +52,56 @@
       "destination_ip",
       "protocol",
       "label"
+    ],
+    "Indicator": [
+      "id",
+      "name",
+      "description"
+    ],
+    "Identity": [
+      "id",
+      "name",
+      "description"
+    ],
+    "File": [
+      "id",
+      "name",
+      "description"
+    ],
+    "Domain": [
+      "id",
+      "name",
+      "description"
+    ],
+    "URL": [
+      "id",
+      "name",
+      "description"
+    ],
+    "Hostname": [
+      "id",
+      "name",
+      "description"
+    ],
+    "Location": [
+      "id",
+      "name",
+      "description"
+    ],
+    "EmailAddress": [
+      "id",
+      "name",
+      "description"
+    ],
+    "IPAddress": [
+      "id",
+      "name",
+      "description"
+    ],
+    "CryptoWallet": [
+      "id",
+      "name",
+      "description"
     ]
   },
   "relationships": [

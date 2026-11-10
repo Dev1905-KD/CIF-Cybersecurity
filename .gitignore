@@ -131,6 +131,11 @@ __pypackages__/
 celerybeat-schedule
 celerybeat.pid
 
+# Generated cybersecurity datasets
+data/processed/csti_entities.json
+data/processed/csti_processing_errors.json
+data/processed/cybersecurity_data.json
+
 # Redis
 *.rdb
 *.aof
