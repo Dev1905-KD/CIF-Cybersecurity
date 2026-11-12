@@ -58,12 +58,14 @@ class VectorRetriever:
         embedding = self.embed_query(query)
 
         cypher = """
-        CALL db.index.vector.queryNodes(
-            $index_name,
-            $top_k,
-            $embedding
+        CYPHER 25
+        MATCH (node:Evidence)
+        SEARCH node IN (
+            VECTOR INDEX evidence_embedding_index
+            FOR $embedding
+            LIMIT $top_k
         )
-        YIELD node, score
+        SCORE AS score
 
         OPTIONAL MATCH (entity)-[:SUPPORTED_BY]->(node)
 
@@ -81,9 +83,13 @@ class VectorRetriever:
         RETURN
             node.id AS id,
             node.source AS source,
-            node.evidence_type AS evidence_type,
+            node.source_type AS source_type,
+            node.stix_type AS stix_type,
             node.claim AS claim,
-            node.date_added AS date_added,
+            node.confidence AS confidence,
+            node.reference AS reference,
+            node.entity_id AS entity_id,
+            node.timestamp AS timestamp,
             score AS similarity,
             [item IN related_entities WHERE item IS NOT NULL]
                 AS entities
@@ -93,9 +99,8 @@ class VectorRetriever:
         with self.connection.driver.session() as session:
             records = session.run(
                 cypher,
-                index_name=VECTOR_INDEX_NAME,
-                top_k=top_k or self.top_k,
-                embedding=embedding
+                embedding=embedding,
+                top_k=top_k or self.top_k
             )
 
             return [dict(record) for record in records]
