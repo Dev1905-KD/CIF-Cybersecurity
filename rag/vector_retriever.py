@@ -75,12 +75,12 @@ class VectorRetriever:
         WITH node, score,
              collect(DISTINCT CASE
                  WHEN entity IS NULL THEN null
-                 ELSE {
+                 ELSE {{
                      id: entity.id,
                      name: entity.name,
                      labels: labels(entity),
                      source: entity.source
-                 }
+                 }}
              END) AS related_entities
 
         RETURN

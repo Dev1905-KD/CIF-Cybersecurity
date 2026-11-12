@@ -3,6 +3,7 @@ from rag.corrective_retriever import CorrectiveRetriever
 from rag.vector_retriever import VectorRetriever
 from rag.context_builder import build_context
 from rag.grader import grade_retrieval
+from rag.grader import grade_retrieval, is_semantically_relevant
 
 
 class CRAGPipeline:
@@ -26,6 +27,7 @@ class CRAGPipeline:
 
         merged = {
             "cve": cve,
+            "query": query,
             "description": "",
             "products": [],
             "evidence": [],
@@ -41,6 +43,14 @@ class CRAGPipeline:
             merged["connections"] = graph_context.get("connections") or []
 
         grading = grade_retrieval(merged)
+
+        relevant_semantic_evidence = [
+            item for item in semantic_evidence
+            if is_semantically_relevant(item, query, cve)
+        ]
+
+        merged["semantic_evidence"] = relevant_semantic_evidence
+
         context = build_context(merged)
 
         return {
@@ -53,6 +63,9 @@ class CRAGPipeline:
                 graph_result and graph_result.get("correction_used")
             ),
             "retrieval_mode": "hybrid_vector_and_graph",
+            "relevant_semantic_evidence_count": len(
+                relevant_semantic_evidence
+            ),
             "semantic_evidence_count": len(semantic_evidence),
             "graph_retrieval": graph_result
         }

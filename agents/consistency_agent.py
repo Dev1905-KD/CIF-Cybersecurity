@@ -1,3 +1,4 @@
+
 import re
 
 
@@ -54,7 +55,8 @@ class ConsistencyAgent:
 
             if not self._product_matches(
                 product,
-                context_products
+                context_products,
+                context
             ):
 
                 findings.append({
@@ -182,7 +184,8 @@ class ConsistencyAgent:
                     or all(
                         self._product_matches(
                             product,
-                            context_products
+                            context_products,
+                            context
                         )
                         for product in answer_products
                     )
@@ -267,9 +270,9 @@ class ConsistencyAgent:
         # ---------------------------------
 
         patterns = [
-            r"affected products?\s*[:\-]\s*([^\n.]+)",
-            r"vulnerable products?\s*[:\-]\s*([^\n.]+)",
-            r"products?\s+affected\s*[:\-]\s*([^\n.]+)"
+            r"affected products?\s*[:\-]\s*([^.\n]+)",
+            r"vulnerable products?\s*[:\-]\s*([^.\n]+)",
+            r"products?\s+affected\s*[:\-]\s*([^.\n]+)"
         ]
 
         for pattern in patterns:
@@ -316,7 +319,8 @@ class ConsistencyAgent:
     def _product_matches(
         self,
         answer_product,
-        context_products
+        context_products,
+        context_text=""
     ):
 
         answer_words = set(
@@ -327,6 +331,30 @@ class ConsistencyAgent:
 
         if not answer_words:
             return False
+
+        # ---------------------------------
+        # 1. Check the complete retrieved
+        #    context, including graph evidence
+        # ---------------------------------
+
+        normalized_product = " ".join(
+            sorted(answer_words)
+        )
+
+        normalized_context_words = set(
+            self._normalize_words(context_text)
+        )
+
+        if answer_words.issubset(
+            normalized_context_words
+        ):
+
+            return True
+
+        # ---------------------------------
+        # 2. Existing structured product
+        #    matching logic (60% threshold)
+        # ---------------------------------
 
         for context_product in context_products:
 

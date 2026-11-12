@@ -1,3 +1,10 @@
+
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from rag.vector_retriever import VectorRetriever
 
 
@@ -14,8 +21,8 @@ def main():
 
         print(f"\nRetrieved {len(results)} evidence records.\n")
 
-        for index, item in enumerate(results, start=1):
-            print(f"{index}. Similarity: {item.get('similarity', 0):.4f}")
+        for i, item in enumerate(results, 1):
+            print(f"{i}. Similarity: {item.get('similarity', 0):.4f}")
             print(f"   Evidence ID: {item.get('id')}")
             print(f"   Source: {item.get('source')}")
             print(f"   Source type: {item.get('source_type')}")
@@ -25,7 +32,7 @@ def main():
             print(f"   Reference: {item.get('reference')}")
             print(f"   Timestamp: {item.get('timestamp')}")
             print(f"   Claim: {item.get('claim')}")
-            print(f"   Related entities: {item.get('entities')}")
+            print(f"   Entities: {item.get('entities')}")
             print()
 
     finally:

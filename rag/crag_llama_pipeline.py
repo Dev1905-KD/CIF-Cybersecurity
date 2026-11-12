@@ -251,7 +251,8 @@ class CRAGLlamaPipeline:
         # ---------------------------------
         # 5. Existing Claim Verification
         # ---------------------------------
-
+        print("\n========== EVIDENCE PASSED TO CLAIM VERIFIER ==========")
+        print(context)
         claim_verification = (
             self.verifier.verify_claims(
                 answer,
