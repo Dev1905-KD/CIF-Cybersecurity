@@ -20,7 +20,7 @@ def build_context(result):
                 context.append(f"- {vendor} {name}".strip())
 
     if result.get("evidence"):
-        context.append("\nEvidence:")
+        context.append("\nGraph Evidence:")
         for evidence in result["evidence"]:
             context.append(
                 f"- Source: {evidence.get('source', 'Unknown')}; "
@@ -39,8 +39,11 @@ def build_context(result):
             context.append(
                 f"- Similarity: {item.get('similarity', 0):.4f}; "
                 f"Source: {item.get('source') or 'Unknown'}; "
-                f"Type: {item.get('evidence_type') or 'Unknown'}; "
+                f"STIX type: {item.get('stix_type') or 'Unknown'}; "
+                f"Source type: {item.get('source_type') or 'Unknown'}; "
+                f"Confidence: {item.get('confidence')}; "
                 f"Claim: {item.get('claim') or ''}; "
+                f"Reference: {item.get('reference') or 'N/A'}; "
                 f"Related entities: {', '.join(entity_names)}"
             )
 
