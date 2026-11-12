@@ -4,7 +4,7 @@ def grade_retrieval(context):
         return {
             "score": 0,
             "status": "irrelevant",
-            "reason": "No context retrieved."
+            "reason": ["No context retrieved."]
         }
 
     score = 0
@@ -16,39 +16,68 @@ def grade_retrieval(context):
 
     if context.get("description"):
         score += 1
-        reasons.append("Description available")
+        reasons.append("CVE description available")
 
-    if context.get("products"):
-        valid_products = [
-            p for p in context["products"]
-            if p.get("product")
-        ]
+    valid_products = [
+        product for product in context.get("products", [])
+        if product.get("product")
+    ]
+    if valid_products:
+        score += 1
+        reasons.append("Affected product found")
 
-        if valid_products:
-            score += 1
-            reasons.append("Affected product found")
+    graph_evidence = [
+        item for item in context.get("evidence", [])
+        if item.get("source") and item.get("claim")
+    ]
+    if graph_evidence:
+        score += 1
+        reasons.append("Graph evidence found")
 
-    if context.get("evidence"):
-        valid_evidence = [
-            e for e in context["evidence"]
-            if e.get("source")
-        ]
+    semantic_evidence = [
+        item for item in context.get("semantic_evidence", [])
+        if item.get("source")
+        and item.get("claim")
+        and isinstance(item.get("similarity"), (int, float))
+    ]
 
-        if valid_evidence:
-            score += 1
-            reasons.append("Evidence source found")
+    strong_matches = [
+        item for item in semantic_evidence
+        if item["similarity"] >= 0.75
+    ]
+    usable_matches = [
+        item for item in semantic_evidence
+        if item["similarity"] >= 0.60
+    ]
+
+    if len(strong_matches) >= 3:
+        score += 2
+        reasons.append(
+            f"{len(strong_matches)} strong semantic evidence matches"
+        )
+    elif usable_matches:
+        score += 1
+        reasons.append(
+            f"{len(usable_matches)} usable semantic evidence matches"
+        )
 
     if score >= 3:
         status = "relevant"
-
     elif score >= 1:
         status = "weak"
-
     else:
         status = "irrelevant"
+
+    average_similarity = (
+        sum(item["similarity"] for item in usable_matches)
+        / len(usable_matches)
+        if usable_matches else 0
+    )
 
     return {
         "score": score,
         "status": status,
-        "reason": reasons
+        "reason": reasons,
+        "semantic_match_count": len(usable_matches),
+        "average_similarity": round(average_similarity, 4)
     }
