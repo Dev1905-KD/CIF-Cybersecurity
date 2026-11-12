@@ -1,0 +1,92 @@
+{
+  "queries_with_ground_truth": 1,
+  "queries_evaluated": 1,
+  "retrieval_at_5": {
+    "precision": 0.2,
+    "recall": 1.0,
+    "mrr": 1.0,
+    "ndcg": 1.0,
+    "evaluated_queries": 1
+  },
+  "retrieval_coverage": {
+    "semantic_candidates_reported": 8,
+    "ranked_semantic_records_saved": false,
+    "scope": "Only serialized evidence records are scored. Current sample exposes graph evidence but reports semantic candidate counts without the individual ranked semantic records.",
+    "warning": "Do not describe these retrieval scores as full hybrid-vector ranking scores until ranked semantic evidence records are included in predictions.jsonl."
+  },
+  "claim_verification": {
+    "Supported": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 1
+    },
+    "Partially Supported": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 1
+    },
+    "Unsupported": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0
+    },
+    "overall": {
+      "accuracy": 1.0,
+      "macro_f1": 0.6666666666666666,
+      "evaluated_claims": 2,
+      "note": "Macro-F1 includes all three configured labels, including labels with zero support."
+    }
+  },
+  "claim_match_details": [
+    {
+      "query": "Investigate CVE-2026-41473. Identify its vulnerability details, affected components, exploitation risks, and available supporting evidence.",
+      "expected_claim": "CVE-2026-41473, affecting CyberPanel versions prior to 2.4.5, is a remote authentication bypass vulnerability in the AI Scanner worker API endpoints, allowing unauthenticated attackers to write arbitrary data to the database.",
+      "expected_status": "Supported",
+      "predicted_status": "Supported",
+      "match": "exact"
+    },
+    {
+      "query": "Investigate CVE-2026-41473. Identify its vulnerability details, affected components, exploitation risks, and available supporting evidence.",
+      "expected_claim": "The retrieved evidence establishes the vulnerability by explicitly stating the affected CyberPanel versions and the attack conditions.",
+      "expected_status": "Partially Supported",
+      "predicted_status": "Partially Supported",
+      "match": "exact"
+    }
+  ],
+  "belief_revision": {
+    "status_accuracy": 1.0,
+    "evaluated_beliefs": 1,
+    "note": "Exact status match against independently assigned expected_belief_status; not a directional belief-revision metric."
+  },
+  "latency_ms": {
+    "mean": 27742.92,
+    "median": 27742.92,
+    "p95": 27742.92,
+    "measured_queries": 1
+  },
+  "per_query": [
+    {
+      "query": "Investigate CVE-2026-41473. Identify its vulnerability details, affected components, exploitation risks, and available supporting evidence.",
+      "ranked_evidence_records_saved": 1,
+      "graph_evidence_records_saved": 1,
+      "retrieval_at_5": {
+        "precision": 0.2,
+        "recall": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      },
+      "claim_labels_matched": 2,
+      "belief_status_match": true
+    }
+  ],
+  "skipped_or_unmeasurable": {},
+  "interpretation": [
+    "Claim labels are matched to exact generated claim text.",
+    "Retrieval metrics score only evidence records actually serialized in predictions.",
+    "Missing metrics are reported as null, never as zero.",
+    "A single query is a smoke test, not a research-grade benchmark."
+  ]
+}
