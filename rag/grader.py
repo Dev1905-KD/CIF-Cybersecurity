@@ -51,7 +51,7 @@ def grade_retrieval(context):
     ]
 
     if len(strong_matches) >= 3:
-        score += 2
+        score += 3
         reasons.append(
             f"{len(strong_matches)} strong semantic evidence matches"
         )
