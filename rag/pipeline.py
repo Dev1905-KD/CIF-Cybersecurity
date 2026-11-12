@@ -40,16 +40,6 @@ class CRAGPipeline:
             merged["evidence"] = graph_context.get("evidence") or []
             merged["connections"] = graph_context.get("connections") or []
 
-        # Make semantic results visible to the existing evidence grader.
-        for item in semantic_evidence:
-            merged["evidence"].append({
-                "source": item.get("source") or "Unknown",
-                "type": item.get("evidence_type") or "",
-                "claim": item.get("claim") or "",
-                "date_added": item.get("date_added") or "",
-                "similarity": item.get("similarity")
-            })
-
         grading = grade_retrieval(merged)
         context = build_context(merged)
 
