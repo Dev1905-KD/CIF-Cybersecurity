@@ -57,11 +57,14 @@ class VectorRetriever:
     def retrieve(self, query, top_k=None):
         embedding = self.embed_query(query)
 
-        cypher = """
+        if not VECTOR_INDEX_NAME.replace("_", "").isalnum():
+            raise ValueError("Invalid Neo4j vector index name.")
+
+        cypher = f"""
         CYPHER 25
         MATCH (node:Evidence)
         SEARCH node IN (
-            VECTOR INDEX evidence_embedding_index
+            VECTOR INDEX {VECTOR_INDEX_NAME}
             FOR $embedding
             LIMIT $top_k
         )
